@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bible Knowledge Base</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Crimson+Pro:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ink: #1a1208;
+            --parchment: #f5f0e8;
+            --parchment-dark: #ede6d4;
+            --gold: #b8860b;
+            --gold-light: #d4a843;
+            --rust: #8b3a1a;
+            --sage: #4a6741;
+            --muted: #6b5e4a;
+            --card-bg: #faf7f0;
+            --border: rgba(184, 134, 11, 0.25);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background-color: var(--parchment);
+            color: var(--ink);
+            font-family: 'Crimson Pro', Georgia, serif;
+            font-size: 18px;
+            line-height: 1.7;
+            min-height: 100vh;
+        }
+
+        /* Subtle texture overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        header {
+            background: var(--ink);
+            color: var(--parchment);
+            padding: 2.5rem 3rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        header::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, var(--gold), var(--gold-light), var(--gold), transparent);
+        }
+
+        .header-inner {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 2rem;
+        }
+
+        .logo {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 2rem;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            color: var(--parchment);
+        }
+
+        .logo span {
+            color: var(--gold-light);
+        }
+
+        .subtitle {
+            font-size: 0.85rem;
+            color: rgba(245,240,232,0.6);
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            margin-top: 0.2rem;
+        }
+
+        .search-bar {
+            display: flex;
+            gap: 0;
+            flex: 1;
+            max-width: 420px;
+        }
+
+        .search-bar input {
+            flex: 1;
+            padding: 0.65rem 1.1rem;
+            border: 1px solid var(--gold);
+            border-right: none;
+            border-radius: 3px 0 0 3px;
+            background: rgba(245,240,232,0.08);
+            color: var(--parchment);
+            font-family: 'Crimson Pro', serif;
+            font-size: 1rem;
+            outline: none;
+            transition: background 0.2s;
+        }
+
+        .search-bar input::placeholder { color: rgba(245,240,232,0.4); }
+        .search-bar input:focus { background: rgba(245,240,232,0.15); }
+
+        .search-bar button {
+            padding: 0.65rem 1.2rem;
+            background: var(--gold);
+            color: var(--ink);
+            border: none;
+            border-radius: 0 3px 3px 0;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.2s;
+        }
+
+        .search-bar button:hover { background: var(--gold-light); }
+
+        main {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Stats bar */
+        .stats-bar {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 3rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 2.2rem;
+            font-weight: 600;
+            color: var(--gold);
+            line-height: 1;
+        }
+
+        .stat-label {
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--muted);
+            margin-top: 0.2rem;
+        }
+
+        /* Layout */
+        .layout {
+            display: grid;
+            grid-template-columns: 260px 1fr;
+            gap: 3rem;
+            align-items: start;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            position: sticky;
+            top: 2rem;
+        }
+
+        .sidebar-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--muted);
+            margin-bottom: 1rem;
+        }
+
+        .topic-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+
+        .topic-btn {
+            width: 100%;
+            text-align: left;
+            background: none;
+            border: 1px solid transparent;
+            border-radius: 4px;
+            padding: 0.6rem 0.9rem;
+            font-family: 'Crimson Pro', serif;
+            font-size: 1rem;
+            color: var(--ink);
+            cursor: pointer;
+            transition: all 0.15s;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .topic-btn:hover {
+            background: var(--parchment-dark);
+            border-color: var(--border);
+        }
+
+        .topic-btn.active {
+            background: var(--ink);
+            color: var(--parchment);
+            border-color: var(--ink);
+        }
+
+        .topic-btn .count {
+            font-size: 0.75rem;
+            opacity: 0.5;
+            font-style: italic;
+        }
+
+        .add-btn {
+            margin-top: 1rem;
+            width: 100%;
+            padding: 0.6rem;
+            background: transparent;
+            border: 1px dashed var(--gold);
+            border-radius: 4px;
+            color: var(--gold);
+            font-family: 'Crimson Pro', serif;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .add-btn:hover { background: rgba(184,134,11,0.08); }
+
+        /* Insights area */
+        .section-header {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+        }
+
+        .section-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.9rem;
+            font-weight: 600;
+            font-style: italic;
+        }
+
+        .section-desc {
+            font-size: 0.95rem;
+            color: var(--muted);
+            margin-top: 0.2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .new-insight-btn {
+            background: var(--sage);
+            color: white;
+            border: none;
+            padding: 0.5rem 1.1rem;
+            border-radius: 3px;
+            font-family: 'Crimson Pro', serif;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .new-insight-btn:hover { opacity: 0.85; }
+
+        /* Insight card */
+        .insight-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1.6rem 2rem;
+            margin-bottom: 1.2rem;
+            position: relative;
+            transition: box-shadow 0.2s;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .insight-card:hover {
+            box-shadow: 0 4px 20px rgba(26,18,8,0.08);
+        }
+
+        .insight-card::before {
+            content: '\275D';
+            position: absolute;
+            top: 1rem;
+            left: 1.4rem;
+            font-size: 1.8rem;
+            color: var(--gold);
+            opacity: 0.3;
+            font-family: Georgia, serif;
+        }
+
+        .insight-content {
+            font-size: 1.05rem;
+            color: var(--ink);
+            padding-left: 0.5rem;
+            margin-bottom: 0.8rem;
+        }
+
+        .insight-commentary {
+            font-size: 0.95rem;
+            color: var(--muted);
+            font-style: italic;
+            border-left: 2px solid var(--gold);
+            padding-left: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        .insight-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.6rem;
+            align-items: center;
+            margin-top: 0.8rem;
+        }
+
+        .tag {
+            font-size: 0.78rem;
+            padding: 0.2rem 0.7rem;
+            border-radius: 20px;
+            font-family: 'Crimson Pro', serif;
+        }
+
+        .tag-source {
+            background: rgba(139,58,26,0.1);
+            color: var(--rust);
+            border: 1px solid rgba(139,58,26,0.2);
+        }
+
+        .tag-verse {
+            background: rgba(74,103,65,0.1);
+            color: var(--sage);
+            border: 1px solid rgba(74,103,65,0.2);
+        }
+
+        .tag-type {
+            background: rgba(184,134,11,0.1);
+            color: var(--gold);
+            border: 1px solid rgba(184,134,11,0.2);
+            text-transform: capitalize;
+        }
+
+        .delete-btn {
+            position: absolute;
+            top: 0.8rem;
+            right: 0.8rem;
+            background: none;
+            border: none;
+            color: var(--muted);
+            cursor: pointer;
+            font-size: 1.1rem;
+            opacity: 0.3;
+            transition: opacity 0.2s;
+            padding: 0.2rem 0.4rem;
+        }
+        .delete-btn:hover { opacity: 0.7; color: var(--rust); }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(26,18,8,0.65);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.open { display: flex; }
+
+        .modal {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 2.5rem;
+            width: 90%;
+            max-width: 560px;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideUp 0.25s ease;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal h2 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.6rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.2rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--muted);
+            margin-bottom: 0.4rem;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 0.65rem 0.9rem;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background: var(--parchment);
+            font-family: 'Crimson Pro', serif;
+            font-size: 1rem;
+            color: var(--ink);
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            border-color: var(--gold);
+        }
+
+        .form-group textarea { resize: vertical; min-height: 90px; }
+
+        .form-actions {
+            display: flex;
+            gap: 0.8rem;
+            justify-content: flex-end;
+            margin-top: 1.5rem;
+        }
+
+        .btn-cancel {
+            background: none;
+            border: 1px solid var(--border);
+            padding: 0.55rem 1.2rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Crimson Pro', serif;
+            font-size: 1rem;
+        }
+
+        .btn-save {
+            background: var(--ink);
+            color: var(--parchment);
+            border: none;
+            padding: 0.55rem 1.4rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Crimson Pro', serif;
+            font-size: 1rem;
+            transition: opacity 0.2s;
+        }
+        .btn-save:hover { opacity: 0.8; }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--muted);
+        }
+        .empty-state .icon { font-size: 3rem; margin-bottom: 1rem; }
+        .empty-state p { font-style: italic; }
+
+        /* Source type icons */
+        .type-icon { margin-right: 0.3rem; }
+
+        @media (max-width: 768px) {
+            .layout { grid-template-columns: 1fr; }
+            .header-inner { flex-direction: column; align-items: flex-start; }
+            .search-bar { max-width: 100%; width: 100%; }
+            .stats-bar { gap: 1rem; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-inner">
+        <div>
+            <div class="logo">Bible <span>Knowledge</span> Base</div>
+            <div class="subtitle">Personal insights from Scripture &amp; study</div>
+        </div>
+        <div class="search-bar">
+            <input type="text" id="searchInput" placeholder="Search insights…" />
+            <button onclick="doSearch()">⌕</button>
+        </div>
+    </div>
+</header>
+
+<main>
+    <div class="stats-bar">
+        <div class="stat">
+            <div class="stat-number" id="statTopics">—</div>
+            <div class="stat-label">Topics</div>
+        </div>
+        <div class="stat">
+            <div class="stat-number" id="statInsights">—</div>
+            <div class="stat-label">Insights</div>
+        </div>
+        <div class="stat">
+            <div class="stat-number" id="statSources">—</div>
+            <div class="stat-label">Sources</div>
+        </div>
+    </div>
+
+    <div class="layout">
+        <!-- Sidebar: Topics -->
+        <aside class="sidebar">
+            <div class="sidebar-title">Topics</div>
+            <ul class="topic-list" id="topicList"></ul>
+            <button class="add-btn" onclick="openTopicModal()">+ New topic</button>
+        </aside>
+
+        <!-- Main: Insights -->
+        <section>
+            <div class="section-header">
+                <div>
+                    <div class="section-title" id="currentTopicTitle">All Insights</div>
+                    <div class="section-desc" id="currentTopicDesc"></div>
+                </div>
+                <button class="new-insight-btn" onclick="openInsightModal()">+ Add insight</button>
+            </div>
+            <div id="insightList"></div>
+        </section>
+    </div>
+</main>
+
+<!-- Add Insight Modal -->
+<div class="modal-overlay" id="insightModal">
+    <div class="modal">
+        <h2>Add New Insight</h2>
+        <div class="form-group">
+            <label>Topic</label>
+            <select id="insightTopicId"></select>
+        </div>
+        <div class="form-group">
+            <label>Insight / Key Takeaway</label>
+            <textarea id="insightContent" placeholder="What did you learn?"></textarea>
+        </div>
+        <div class="form-group">
+            <label>Your Personal Commentary</label>
+            <textarea id="insightCommentary" placeholder="What does this mean to you personally?"></textarea>
+        </div>
+        <div class="form-group">
+            <label>Source (optional)</label>
+            <select id="insightSourceId">
+                <option value="">— No source —</option>
+            </select>
+        </div>
+        <div class="form-actions">
+            <button class="btn-cancel" onclick="closeModal('insightModal')">Cancel</button>
+            <button class="btn-save" onclick="saveInsight()">Save Insight</button>
+        </div>
+    </div>
+</div>
+
+<!-- Add Topic Modal -->
+<div class="modal-overlay" id="topicModal">
+    <div class="modal">
+        <h2>Add New Topic</h2>
+        <div class="form-group">
+            <label>Topic Name</label>
+            <input type="text" id="topicName" placeholder="e.g. Grace, Prayer, The Trinity…" />
+        </div>
+        <div class="form-group">
+            <label>Description</label>
+            <textarea id="topicDesc" placeholder="A brief description of this topic…"></textarea>
+        </div>
+        <div class="form-actions">
+            <button class="btn-cancel" onclick="closeModal('topicModal')">Cancel</button>
+            <button class="btn-save" onclick="saveTopic()">Save Topic</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const API = '/api';
+let topics = [], insights = [], sources = [];
+let activeTopicId = null;
+
+const typeIcon = { video: '▶', article: '📄', book: '📖', podcast: '🎙', sermon: '⛪' };
+
+async function fetchAll() {
+    [topics, insights, sources] = await Promise.all([
+        fetch(`${API}/topics`).then(r => r.json()),
+        fetch(`${API}/insights`).then(r => r.json()),
+        fetch(`${API}/sources`).then(r => r.json()),
+    ]);
+    renderStats();
+    renderTopics();
+    renderInsights(insights);
+}
+
+function renderStats() {
+    document.getElementById('statTopics').textContent = topics.length;
+    document.getElementById('statInsights').textContent = insights.length;
+    document.getElementById('statSources').textContent = sources.length;
+}
+
+function renderTopics() {
+    const list = document.getElementById('topicList');
+    list.innerHTML = `
+        <li><button class="topic-btn ${activeTopicId === null ? 'active' : ''}" onclick="selectTopic(null)">
+            All <span class="count">${insights.length}</span>
+        </button></li>
+    ` + topics.map(t => {
+        const count = insights.filter(i => i.topic && i.topic.id === t.id).length;
+        return `<li><button class="topic-btn ${activeTopicId === t.id ? 'active' : ''}" onclick="selectTopic(${t.id}, '${t.name}', '${(t.description||'').replace(/'/g,"\\'")}')">
+            ${t.name} <span class="count">${count}</span>
+        </button></li>`;
+    }).join('');
+}
+
+function selectTopic(id, name, desc) {
+    activeTopicId = id;
+    document.getElementById('currentTopicTitle').textContent = name || 'All Insights';
+    document.getElementById('currentTopicDesc').textContent = desc || '';
+    const filtered = id ? insights.filter(i => i.topic && i.topic.id === id) : insights;
+    renderInsights(filtered);
+    renderTopics();
+}
+
+function renderInsights(list) {
+    const el = document.getElementById('insightList');
+    if (!list.length) {
+        el.innerHTML = `<div class="empty-state"><div class="icon">✦</div><p>No insights yet for this topic.<br>Add one to get started.</p></div>`;
+        return;
+    }
+    el.innerHTML = list.map(i => `
+        <div class="insight-card">
+            <button class="delete-btn" onclick="deleteInsight(${i.id})" title="Delete">✕</button>
+            <div class="insight-content">${i.content || ''}</div>
+            ${i.yourCommentary ? `<div class="insight-commentary">${i.yourCommentary}</div>` : ''}
+            <div class="insight-meta">
+                ${i.source ? `<span class="tag tag-source">${typeIcon[i.source.type] || '🔗'} ${i.source.title}</span>` : ''}
+                ${(i.verses||[]).map(v => `<span class="tag tag-verse">${v.book} ${v.chapter}:${v.verseStart}</span>`).join('')}
+                ${i.source ? `<span class="tag tag-type">${i.source.type}</span>` : ''}
+            </div>
+        </div>
+    `).join('');
+}
+
+async function deleteInsight(id) {
+    if (!confirm('Delete this insight?')) return;
+    await fetch(`${API}/insights/${id}`, { method: 'DELETE' });
+    await fetchAll();
+    selectTopic(activeTopicId);
+}
+
+function openInsightModal() {
+    const topicSel = document.getElementById('insightTopicId');
+    topicSel.innerHTML = topics.map(t =>
+        `<option value="${t.id}" ${t.id === activeTopicId ? 'selected' : ''}>${t.name}</option>`
+    ).join('');
+    const srcSel = document.getElementById('insightSourceId');
+    srcSel.innerHTML = '<option value="">— No source —</option>' +
+        sources.map(s => `<option value="${s.id}">${s.title}</option>`).join('');
+    document.getElementById('insightModal').classList.add('open');
+}
+
+async function saveInsight() {
+    const body = {
+        content: document.getElementById('insightContent').value,
+        yourCommentary: document.getElementById('insightCommentary').value,
+        topic: { id: parseInt(document.getElementById('insightTopicId').value) },
+    };
+    const srcId = document.getElementById('insightSourceId').value;
+    if (srcId) body.source = { id: parseInt(srcId) };
+    await fetch(`${API}/insights`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+    });
+    closeModal('insightModal');
+    document.getElementById('insightContent').value = '';
+    document.getElementById('insightCommentary').value = '';
+    await fetchAll();
+    selectTopic(activeTopicId);
+}
+
+function openTopicModal() {
+    document.getElementById('topicModal').classList.add('open');
+}
+
+async function saveTopic() {
+    const name = document.getElementById('topicName').value.trim();
+    if (!name) return;
+    await fetch(`${API}/topics`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, description: document.getElementById('topicDesc').value })
+    });
+    closeModal('topicModal');
+    document.getElementById('topicName').value = '';
+    document.getElementById('topicDesc').value = '';
+    await fetchAll();
+}
+
+function closeModal(id) {
+    document.getElementById(id).classList.remove('open');
+}
+
+async function doSearch() {
+    const q = document.getElementById('searchInput').value.trim();
+    if (!q) { await fetchAll(); return; }
+    const results = await fetch(`${API}/insights/search?q=${encodeURIComponent(q)}`).then(r => r.json());
+    activeTopicId = null;
+    document.getElementById('currentTopicTitle').textContent = `Results for "${q}"`;
+    document.getElementById('currentTopicDesc').textContent = `${results.length} insight(s) found`;
+    renderInsights(results);
+    renderTopics();
+}
+
+document.getElementById('searchInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doSearch();
+});
+
+// Close modals on overlay click
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', e => {
+        if (e.target === overlay) overlay.classList.remove('open');
+    });
+});
+
+fetchAll();
+</script>
+</body>
+</html>
